@@ -1,83 +1,110 @@
-name: Build and Cache Artifacts
-
+name: CI
 on:
   push:
-    branches: [ main ]
-
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 env:
   CARGO_TERM_COLOR: always
-
 jobs:
-  build-and-cache:
-    strategy:
-      matrix:
-        include:
-          - os: macOS-latest
-            target: x86_64-apple-darwin
-          - os: macOS-latest
-            target: arm64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-
-    runs-on: ${{ matrix.os }}
-
+  build-ubuntu:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          pkg-config \
+          libssl-dev \
+          libasound2-dev \
+          libxkbcommon-dev \
+          libwayland-dev \
+          libatk1.0-dev \
+          libpango1.0-dev \
+          libgdk-pixbuf2.0-dev \
+          libgtk-3-dev \
+          libwebkit2gtk-4.1-dev \
+          libsoup-3.0-dev \
+          libvulkan-dev \
+          libxkbcommon-x11-dev \
 
-      - name: Cache Rust dependencies and target artifacts
-        uses: actions/cache@v3
-        with:
-          path: |
-            ${{ github.workspace }}/target
-            ${{ github.workspace }}/Cargo.lock
-          key: ${{ runner.os }}-rust-${{ hashFiles('Cargo.toml') }}-${{ matrix.target }}
-          restore-keys: |
-            ${{ runner.os }}-rust-${{ hashFiles('Cargo.toml') }}-
-      
-      - name: Fetch dependencies
-        run: cargo fetch
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with: 
+        rustflags: ""
+    - name: Rust cache
+      uses: swatinem/rust-cache@v2
+    - name: Install cargo bundle
+      run: cargo install cargo-bundle
+    - name: Build
+      run: cargo bundle --release
 
-      - name: Build application
-        run: cargo build --target ${{ matrix.target }}
-      
-      - name: Run fmt check
-        run: cargo fmt --all -- --check
-        continue-on-error: true
-      
-      - name: Run clippy check
-        run: cargo clippy --all-targets -- -D warnings
-        continue-on-error: true
+    - name: Upload Ubuntu build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ubuntu-build
+        path: target/release/bundle/deb/*
+        retention-days: 7
 
-      - name: Package application
-        run: |
-          if [ "${matrix.target}" == "x86_64-unknown-linux-gnu" ]; then
-            cargo deb --all-features
-          elif [ "${matrix.target}" == "x86_64-pc-windows-msvc" ]; then
-            cargo rpm --all-features
-          elif [ "${matrix.target}" == "x86_64-apple-darwin" ] || [ "${matrix.target}" == "arm64-apple-darwin" ]; then
-            cargo bundle --all-features
-          fi
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: application-${matrix.target}
-          path: |
-            if [ "${matrix.target}" == "x86_64-unknown-linux-gnu" ]; then
-              target/deb/
-            elif [ "${matrix.target}" == "x86_64-pc-windows-msvc" ]; then
-              target/rpm/
-            elif [ "${matrix.target}" == "x86_64-apple-darwin" ] || [ "${matrix.target}" == "arm64-apple-darwin" ]; then
-              target/bundle/
-            fi
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        rustflags: ""
+    - name: Rust cache
+      uses: swatinem/rust-cache@v2
+    - name: Install cargo bundle
+      run: cargo install cargo-bundle
+    - name: Install Vulkan SDK
+      uses: humbletim/install-vulkan-sdk@v1.1.1
+    - name: Build
+      run: cargo bundle --release
+      env:
+        VCPKGRS_DYNAMIC: 1
+        OPENSSL_DIR: ${{ github.workspace }}/vcpkg/installed/x64-windows
+        OPENSSL_NO_VENDOR: 1
+    - name: Upload Windows build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build
+        path: target/release/bundle/msi/*
+        retention-days: 7
+        
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        rustflags: ""
+    - name: Rust cache
+      uses: swatinem/rust-cache@v2
+    - name: Install cargo bundle
+      run: cargo install cargo-bundle
+    - name: Build
+      run: cargo bundle --release --target aarch64-apple-darwin
+    - name: Build
+      run: cargo bundle --release
+    - name: Upload MacOS build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-build-x86
+        path: target/release/bundle/osx/*
+        retention-days: 7
+    - name: Upload MacOS build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-build-arm
+        path: target/aarch64-apple-darwin/release/bundle/osx/*
+        retention-days: 7
