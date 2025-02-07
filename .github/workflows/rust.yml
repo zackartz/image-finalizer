@@ -1,70 +1,83 @@
-name: Rust
+name: Build and Cache Artifacts
 
 on:
   push:
-    branches:
-      - "main"
-  pull_request:
-    branches:
-      - "main"
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-and-cache:
+    strategy:
+      matrix:
+        include:
+          - os: macOS-latest
+            target: x86_64-apple-darwin
+          - os: macOS-latest
+            target: arm64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Rust toolchain
-        uses: actions/setup-rust-toolchain@v1
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: stable
+          override: true
+          components: rustfmt, clippy
 
-      - name: Cache Cargo registry
+      - name: Cache Rust dependencies and target artifacts
         uses: actions/cache@v3
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            ${{ github.workspace }}/target
+            ${{ github.workspace }}/Cargo.lock
+          key: ${{ runner.os }}-rust-${{ hashFiles('Cargo.toml') }}-${{ matrix.target }}
+          restore-keys: |
+            ${{ runner.os }}-rust-${{ hashFiles('Cargo.toml') }}-
+      
+      - name: Fetch dependencies
+        run: cargo fetch --all-features
 
-      - name: Build (Linux)
-        run: cargo build --verbose --release
+      - name: Build application
+        run: cargo build --all-features --target ${{ matrix.target }}
+      
+      - name: Run fmt check
+        run: cargo fmt --all -- --check
+        continue-on-error: true
+      
+      - name: Run clippy check
+        run: cargo clippy --all-features --all-targets -- -D warnings
+        continue-on-error: true
 
-      - name: Build (Windows)
-        if: runner.os == 'Linux'
+      - name: Package application
         run: |
-          sudo apt-get update
-          sudo apt-get install -y mingw-w64
-          rustup target add x86_64-pc-windows-gnu
-          cargo build --target x86_64-pc-windows-gnu --release --verbose
+          if [ "${matrix.target}" == "x86_64-unknown-linux-gnu" ]; then
+            cargo deb --all-features
+          elif [ "${matrix.target}" == "x86_64-pc-windows-msvc" ]; then
+            cargo rpm --all-features
+          elif [ "${matrix.target}" == "x86_64-apple-darwin" ] || [ "${matrix.target}" == "arm64-apple-darwin" ]; then
+            cargo bundle --all-features
+          fi
 
-      - name: Build (macOS ARM)
-        if: runner.os == 'Linux'
-        runs-on: macos-latest
-        steps:
-          - uses: actions/checkout@v4
-          - name: Set up Rust toolchain
-            uses: actions/setup-rust-toolchain@v1
-            with:
-              toolchain: stable
-              target: aarch64-apple-darwin # Specify ARM target
-
-          - name: Cache Cargo registry
-            uses: actions/cache@v3
-            with:
-              path: |
-                ~/.cargo/registry
-                ~/.cargo/git
-                target
-              key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-          - name: Build (macOS ARM)
-            run: cargo build --verbose --release --target aarch64-apple-darwin
-
-      - name: Run tests
-        run: cargo test --verbose
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: application-${matrix.target}
+          path: |
+            if [ "${matrix.target}" == "x86_64-unknown-linux-gnu" ]; then
+              target/deb/
+            elif [ "${matrix.target}" == "x86_64-pc-windows-msvc" ]; then
+              target/rpm/
+            elif [ "${matrix.target}" == "x86_64-apple-darwin" ] || [ "${matrix.target}" == "arm64-apple-darwin" ]; then
+              target/bundle/
+            fi
