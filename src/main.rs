@@ -360,7 +360,7 @@ fn pick_directory(target: &mut String) {
 impl App for BorderApp {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Image Border App");
+            ui.heading("Image Finalizer");
 
             ui.horizontal(|ui| {
                 ui.label("Input Directory:");
