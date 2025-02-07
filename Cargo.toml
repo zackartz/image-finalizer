@@ -1,0 +1,11 @@
+[package]
+name = "image-processor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.31.0"
+egui = "0.31.0"
+image = "0.25.5"
+rayon = "1.10.0"
+rfd = "0.15.2"
