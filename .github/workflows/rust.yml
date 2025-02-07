@@ -46,17 +46,17 @@ jobs:
             ${{ runner.os }}-rust-${{ hashFiles('Cargo.toml') }}-
       
       - name: Fetch dependencies
-        run: cargo fetch --all-features
+        run: cargo fetch
 
       - name: Build application
-        run: cargo build --all-features --target ${{ matrix.target }}
+        run: cargo build --target ${{ matrix.target }}
       
       - name: Run fmt check
         run: cargo fmt --all -- --check
         continue-on-error: true
       
       - name: Run clippy check
-        run: cargo clippy --all-features --all-targets -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
         continue-on-error: true
 
       - name: Package application
