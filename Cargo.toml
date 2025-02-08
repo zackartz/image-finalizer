@@ -9,3 +9,12 @@ egui = "0.31.0"
 image = "0.25.5"
 rayon = "1.10.0"
 rfd = "0.15.2"
+
+[package.metadata.bundle]
+name = "ImageFinalizer"
+identifier = "computer.zoeys.image-finalizer"
+version = "1.0.0"
+copyright = "Copyright (c) Zoey Myers 2016. All rights reserved."
+category = "Photography"
+short_description = "Easily make your photos ready for distribution"
+osx_url_schemes = ["computer.zoeys.image-finalizer"]
