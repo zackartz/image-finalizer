@@ -63,8 +63,6 @@ jobs:
       uses: swatinem/rust-cache@v2
     - name: Install cargo bundle
       run: cargo install cargo-bundle
-    - name: Install Vulkan SDK
-      uses: humbletim/install-vulkan-sdk@v1.1.1
     - name: Build
       run: cargo bundle --release
       env:
