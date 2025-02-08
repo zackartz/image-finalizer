@@ -85,6 +85,7 @@ impl BorderApp {
                         || ext_str == "jpeg"
                         || ext_str == "gif"
                         || ext_str == "bmp"
+                        || ext_str == "tif"
                 })
             })
             .collect();
