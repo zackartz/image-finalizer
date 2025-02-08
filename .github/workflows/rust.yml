@@ -64,7 +64,7 @@ jobs:
     - name: Install cargo bundle
       run: cargo install cargo-bundle
     - name: Build
-      run: cargo bundle --release
+      run: cargo build --release
       env:
         VCPKGRS_DYNAMIC: 1
         OPENSSL_DIR: ${{ github.workspace }}/vcpkg/installed/x64-windows
@@ -73,7 +73,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: windows-build
-        path: target/release/bundle/msi/*
+        path: target/release/image-processor.exe
         retention-days: 7
         
   build-macos:
