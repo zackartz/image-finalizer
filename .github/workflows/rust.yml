@@ -30,11 +30,6 @@ jobs:
           libsoup-3.0-dev \
           libvulkan-dev \
           libxkbcommon-x11-dev \
-    - name: Install Goreleaser
-      run: |
-        echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
-        sudo apt update
-        sudo apt install goreleaser
 
     - name: Install Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -43,7 +38,16 @@ jobs:
     - name: Rust cache
       uses: swatinem/rust-cache@v2
 
-    - name: Release
-      run: |
-        goreleaser release
+    - uses: goreleaser/goreleaser-action@v6
+      with:
+        # either 'goreleaser' (default) or 'goreleaser-pro'
+        distribution: goreleaser
+        # 'latest', 'nightly', or a semver
+        version: "~> v2"
+        args: release --clean
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
+        # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+        GH_PAT: ${{ secrets.GH_PAT }}
 
