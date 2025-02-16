@@ -95,7 +95,7 @@
           packages =
             (commonArgs.nativeBuildInputs or [])
             ++ (commonArgs.buildInputs or [])
-            ++ [pkgs.rust-analyzer-unwrapped];
+            ++ [pkgs.rust-analyzer-unwrapped pkgs.goreleaser];
 
           RUST_SRC_PATH = "${
             pkgs.rust-bin.${rustChannel}.${rustVersion}.rust-src

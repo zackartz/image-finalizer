@@ -30,6 +30,11 @@ jobs:
           libsoup-3.0-dev \
           libvulkan-dev \
           libxkbcommon-x11-dev \
+    - name: Install Goreleaser
+      run: |
+        echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+        sudo apt update
+        sudo apt install goreleaser
 
     - name: Install Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -37,72 +42,8 @@ jobs:
         rustflags: ""
     - name: Rust cache
       uses: swatinem/rust-cache@v2
-    - name: Install cargo bundle
-      run: cargo install cargo-bundle
-    - name: Build
-      run: cargo bundle --release
 
-    - name: Upload Ubuntu build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ubuntu-build
-        path: target/release/bundle/deb/*
-        retention-days: 7
+    - name: Release
+      run: |
+        goreleaser release
 
-  build-windows:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-    - name: Install Rust toolchain
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-      with:
-        rustflags: ""
-    - name: Rust cache
-      uses: swatinem/rust-cache@v2
-    - name: Install cargo bundle
-      run: cargo install cargo-bundle
-    - name: Build
-      run: cargo build --release
-      env:
-        VCPKGRS_DYNAMIC: 1
-        OPENSSL_DIR: ${{ github.workspace }}/vcpkg/installed/x64-windows
-        OPENSSL_NO_VENDOR: 1
-    - name: Upload Windows build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-build
-        path: target/release/image-processor.exe
-        retention-days: 7
-        
-  build-macos:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-    - name: Install Rust toolchain
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-      with:
-        rustflags: ""
-    - name: Rust cache
-      uses: swatinem/rust-cache@v2
-    - name: Install cargo bundle
-      run: cargo install cargo-bundle
-    - name: Build
-      run: cargo bundle --release --target aarch64-apple-darwin
-    - name: Build
-      run: cargo bundle --release
-    - name: Upload MacOS build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-build-x86
-        path: target/release/bundle/osx/*
-        retention-days: 7
-    - name: Upload MacOS build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-build-arm
-        path: target/aarch64-apple-darwin/release/bundle/osx/*
-        retention-days: 7
