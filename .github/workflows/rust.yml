@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     tags: ['v*']
+permissions:
+  contents: write
+  id-token: write
+  packages: write
 env:
   CARGO_TERM_COLOR: always
 jobs:
