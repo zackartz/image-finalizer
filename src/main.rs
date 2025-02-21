@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -426,6 +428,7 @@ impl App for BorderApp {
                 }
                 MessageResult::InputUpdate(path) => {
                     self.input_dir = path;
+                    self.load_images();
                 }
                 MessageResult::OutputUpdate(path) => {
                     self.output_dir = path;
@@ -460,9 +463,27 @@ impl App for BorderApp {
                         ctx.request_repaint();
                     });
                 }
-                if ui.button("Load Images").clicked() {
-                    self.load_images();
-                }
+                ui.label(format!(
+                    "Found {} images",
+                    fs::read_dir(&self.input_dir)
+                        .map(|e| e
+                            .filter_map(|entry| entry.ok())
+                            .map(|entry| entry.path())
+                            .filter(|path| {
+                                path.extension().is_some_and(|ext| {
+                                    let ext_str = ext.to_str().unwrap_or("").to_lowercase();
+                                    ext_str == "png"
+                                        || ext_str == "jpg"
+                                        || ext_str == "jpeg"
+                                        || ext_str == "gif"
+                                        || ext_str == "bmp"
+                                        || ext_str == "tif"
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                            .len())
+                        .unwrap_or(0)
+                ));
             });
 
             ui.horizontal(|ui| {
